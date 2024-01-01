@@ -9,16 +9,18 @@ from requests.exceptions import ConnectionError
 from constants import REST_API_URL, USERNAME, PASSWORD, ENDPOINT_PORT
 
 
-
-
-def send_request():
+def send_request(username=USERNAME, password=PASSWORD, verbos=False):
     try:
-        basic = HTTPBasicAuth(USERNAME, PASSWORD)
+        basic = HTTPBasicAuth(username, password)
         response = requests.get(REST_API_URL.format(1), auth=basic)
         if response.status_code == 200:
-            print("Request successful")
+            if verbos:
+                print("Request successful")
+            return True
         else:
-            print(f"Request failed with status code: {response.status_code}")
+            if verbos:
+                print(f"Request failed with status code: {response.status_code}")
+            return False
     except ConnectionError as e:
         print(f"Failed to send request due to connection error exception")
         raise e

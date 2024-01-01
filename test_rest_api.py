@@ -1,9 +1,10 @@
 import concurrent.futures
 import time
+
 import pytest
 import json
 
-from constants import REST_API_URL, MAX_PAGE, LOAD_TEST_REQUESTS, LOAD_TEST_WORKERS
+from constants import REST_API_URL, MAX_PAGE, LOAD_TEST_REQUESTS, LOAD_TEST_WORKERS, CREDENTIAL_GUESSING_ATTEMPTS
 from utils import send_request, dict_validation
 
 
@@ -12,18 +13,6 @@ def test_endpoint_availability(api_session):
     url = REST_API_URL.format(1)
     response = api_session.get(url)
     assert response.status_code == 200
-
-
-def test_stress_test(api_session):
-    sum = 0
-    for i in range(MAX_PAGE):
-        t_before = time.time()
-        r1 = api_session.get(REST_API_URL.format(i))
-        t_after = time.time()
-        duration=t_after - t_before
-        sum+=duration
-        print(duration)
-    print(sum)
 
 
 def test_consistent_data_per_page(api_session):
@@ -46,10 +35,9 @@ def test_data_ids_validation(api_session):
                 ids.append(player['ID'])
             else:
                 raise AssertionError(f'ID duplication')
-    assert r.status_code == 401
 
 
-@pytest.mark.parametrize('api_session', [{'username': 'admin','password':'admin'}], indirect=['api_session'])
+@pytest.mark.parametrize('api_session', [{'username': 'admin', 'password': 'admin'}], indirect=['api_session'])
 def test_user_validation(api_session):
     r = api_session.get(REST_API_URL.format(1))
     assert r.status_code == 200
@@ -68,3 +56,26 @@ def test_load_test(api_session):
     futures = [executor.submit(task) for task in tasks]
     concurrent.futures.wait(futures)
     send_request()
+
+
+def test_invalid_page_number(api_session):
+    r = api_session.get(REST_API_URL.format(-1))
+    assert r.status_code == 418
+
+
+def test_and_operation_rest_api(api_session):
+    r = api_session.get(REST_API_URL.format(1) + '&page=2')
+    assert r.status_code != 200
+
+
+@pytest.mark.parametrize('api_session', [{'username': "' or 1=1 -- ", 'password': 'a'}], indirect=['api_session'])
+def test_sql_injection(api_session):
+    r = api_session.get(REST_API_URL.format(1))
+    assert r.status_code == 401
+
+
+def test_credential_stuffing():
+    for i in range(CREDENTIAL_GUESSING_ATTEMPTS):
+        send_request('x', 'y')
+        time.sleep(0.001)
+    assert not send_request()

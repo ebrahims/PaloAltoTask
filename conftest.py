@@ -1,4 +1,3 @@
-
 import pytest
 import requests
 
@@ -23,5 +22,6 @@ def api_session(request):
     session.get(url)
     return session
 
-def pytest_sessionfinish(session, exitstatus):
+
+def pytest_sessionfinish():
     free_port(ENDPOINT_PORT)
